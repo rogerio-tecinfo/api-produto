@@ -54,7 +54,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: rsprazeres/api-produto:{{tag}}
+          image: rsprazeres/api-produto:latest
           ports: 
           - containerPort: 8080
           env: 
