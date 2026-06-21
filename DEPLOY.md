@@ -66,7 +66,7 @@ cd /home/rogerio_prazeres/workspace/pessoal/api-produto
 docker login -u rsprazeres
 
 # Build + tag pelo SHA do commit
-TAG=$(git rev-parse --short HEAD)
+set TAG $(git rev-parse --short HEAD)
 docker build -t rsprazeres/api-produto:$TAG -f ./src/Dockerfile ./src
 
 # Push (tag do SHA + latest)
@@ -166,11 +166,11 @@ Alternativa via CLI do ArgoCD:
 
 ```bash
 # Repositório privado (com token); para público, omita --username/--password
-argocd repo add https://github.com/rsprazeres/api-produto.git \
+argocd repo add https://github.com/rogerio-tecinfo/api-produto.git \
   --username rsprazeres --password "<PAT>"
 
 argocd app create api-produto \
-  --repo https://github.com/rsprazeres/api-produto.git \
+  --repo https://github.com/rogerio-tecinfo/api-produto.git \
   --path k8s/overlays/prod \
   --dest-server https://kubernetes.default.svc \
   --dest-namespace api-produto \
