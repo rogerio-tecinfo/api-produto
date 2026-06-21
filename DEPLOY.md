@@ -263,6 +263,100 @@ git push
 
 ---
 
+## 12. Expor a aplicação via Cloudflare Tunnel (api-produto.tisolution.cloud)
+
+O cluster já roda o **cloudflared** (tunnel gerenciado localmente) no namespace `kimai`:
+
+- Deployment: `cloudflared` (namespace `kimai`)
+- Config (regras de ingress): ConfigMap `cloudflared-config`, chave `config.yaml`
+- Credenciais: Secret `cloudflared-creds`
+- **Tunnel ID:** `8596388d-374a-427b-8e01-74dba8d246ec`
+
+Expor um novo hostname = (a) adicionar uma regra de ingress no ConfigMap,
+(b) criar o registro DNS apontando para o tunnel e (c) recarregar o cloudflared.
+
+### 12.1 — Conferir a config atual do tunnel
+
+```bash
+# Ver as regras de ingress existentes (e o tunnel ID)
+kubectl get configmap cloudflared-config -n kimai -o jsonpath='{.data.config\.yaml}'
+```
+
+### 12.2 — Adicionar a regra de ingress para a api-produto
+
+Editar o ConfigMap e inserir o bloco **antes** da regra catch-all `- service: http_status:404`
+(a ordem importa; o 404 precisa ser sempre o último):
+
+```bash
+kubectl edit configmap cloudflared-config -n kimai
+```
+
+Bloco a inserir dentro de `ingress:` (aponta para o Service da app no namespace `api-produto`):
+
+```yaml
+  - hostname: api-produto.tisolution.cloud
+    service: http://api-service.api-produto.svc.cluster.local:80
+    originRequest:
+      httpHostHeader: api-produto.tisolution.cloud
+```
+
+> Resultado esperado do `ingress:` (trecho final):
+> ```yaml
+>   - hostname: api-produto.tisolution.cloud
+>     service: http://api-service.api-produto.svc.cluster.local:80
+>     originRequest:
+>       httpHostHeader: api-produto.tisolution.cloud
+>   - service: http_status:404        # <- catch-all permanece por último
+> ```
+
+### 12.3 — Criar o registro DNS (CNAME) apontando para o tunnel
+
+Escolha **uma** das opções:
+
+```bash
+# Opção A — CLI do cloudflared (requer cert.pem de login: 'cloudflared tunnel login')
+cloudflared tunnel route dns 8596388d-374a-427b-8e01-74dba8d246ec api-produto.tisolution.cloud
+
+# Opção B — Cloudflare API (requer CLOUDFLARE_API_TOKEN e o ZONE_ID da tisolution.cloud)
+curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "type": "CNAME",
+    "name": "api-produto",
+    "content": "8596388d-374a-427b-8e01-74dba8d246ec.cfargotunnel.com",
+    "proxied": true
+  }'
+```
+
+> Opção C (manual): no painel Cloudflare → DNS da zona `tisolution.cloud`, criar um
+> **CNAME** `api-produto` → `8596388d-374a-427b-8e01-74dba8d246ec.cfargotunnel.com`
+> com **Proxy (nuvem laranja) ATIVADO**.
+
+### 12.4 — Recarregar o cloudflared para aplicar a nova regra
+
+```bash
+kubectl rollout restart deployment cloudflared -n kimai
+kubectl rollout status deployment cloudflared -n kimai
+```
+
+### 12.5 — Validar o acesso externo
+
+```bash
+# DNS deve resolver para os IPs do Cloudflare
+dig +short api-produto.tisolution.cloud
+
+# A aplicação deve responder pela URL pública (HTTPS via Cloudflare)
+curl -s https://api-produto.tisolution.cloud/health
+curl -s -o /dev/null -w "HTTP %{http_code}\n" https://api-produto.tisolution.cloud/api/produto
+```
+
+> ⚠️ O ConfigMap `cloudflared-config` vive no namespace `kimai` e **não** é gerenciado
+> por esta Application do ArgoCD. Mantenha essa alteração versionada onde o cloudflared
+> for gerenciado, para não perdê-la num redeploy do tunnel.
+
+---
+
 ### Estrutura de arquivos criada
 
 ```
