@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/rsprazeres/api-produto.git
+    repoURL: https://github.com/rogerio-tecinfo/api-produto.git
     targetRevision: main
     path: k8s/overlays/prod
   destination:
