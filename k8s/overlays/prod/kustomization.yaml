@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: api-produto
+
+resources:
+  - ../../base
+
+# Ambiente de produção: 2 réplicas para alta disponibilidade
+replicas:
+  - name: api
+    count: 2
+
+# A linha `newTag` é atualizada automaticamente pelo GitHub Actions
+# (kustomize edit set image) a cada build.
+images:
+  - name: rsprazeres/api-produto
+    newTag: latest
