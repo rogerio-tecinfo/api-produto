@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: api-produto
+
+resources:
+  - namespace.yaml
+  - mongodb.yaml
+  - api-deployment.yaml
+  - api-service.yaml
+
+# A tag da imagem é sobrescrita por cada overlay (e atualizada pelo GitHub Actions)
+images:
+  - name: rsprazeres/api-produto
+    newTag: latest

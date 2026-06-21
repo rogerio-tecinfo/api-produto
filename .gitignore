@@ -1,0 +1,8 @@
+kubeconfig.yml
+*.kubeconfig
+.env
+node_modules/
+kubeconfig.yml
+*.kubeconfig
+.env
+node_modules/
